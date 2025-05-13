@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Mappa Hotel Interattiva</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    #map { height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script>
+    const map = L.map('map').setView([45.4064, 11.8768], 9);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: 'Map data © <a href="https://openstreetmap.org">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTpOJDEinAsoHKXTESGD8-dhPESQRuedmVytP07CVEjhE6_Q2M31Xg8XWdNFGAoRw/pub?gid=645345464&single=true&output=csv";
+
+    function geocodeAddress(address, callback) {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`;
+      fetch(url)
+        .then(response => response.json())
+        .then(data => {
+          if (data.length > 0) {
+            const lat = parseFloat(data[0].lat);
+            const lon = parseFloat(data[0].lon);
+            callback(lat, lon);
+          }
+        })
+        .catch(err => console.error('Errore nel geocoding:', err));
+    }
+
+    Papa.parse(csvUrl, {
+      download: true,
+      header: true,
+      complete: function(results) {
+        results.data.forEach(row => {
+          const nome = row["DENOMINAZIONE"];
+          const indirizzo = `${row["INDIRIZZO"]} ${row["NUMERO_CIVICO"]}, ${row["CAP"]} ${row["COMUNE"]}, ${row["PROVINCIA"]}, Italia`;
+          geocodeAddress(indirizzo, (lat, lon) => {
+            L.marker([lat, lon])
+              .addTo(map)
+              .bindPopup(`<b>${nome}</b><br>${indirizzo}<br>Camere: ${row["CAMERE"]}`);
+          });
+        });
+      }
+    });
+  </script>
+</body>
+</html>
